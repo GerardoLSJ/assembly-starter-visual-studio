@@ -2,9 +2,10 @@
 .MODEL FLAT, C
 .STACK
 .DATA
-string_input DB "1234567890",0
+string_input DB "hello world",0
 .CODE
-to_upper PROC
+                            ;EXAMPLE: -2 == 0xFFFF FFFE
+int_parser PROC
 	lea eax, string_input	;load effective adress of this.string
 	mov ebx, 0				;Contador init in zero
 	
@@ -21,6 +22,23 @@ space:
 	jne for_loop			;jump not equal
 	ret
 
-to_upper ENDP
+    mov edx, num3entered ; our string
+atoi:
+    xor eax, eax ; zero a "result so far"
+.top:
+    movzx ecx, byte [edx] ; get a character
+    inc edx ; ready for next one
+    cmp ecx, '0' ; valid?
+    jb .done
+    cmp ecx, '9'
+    ja .done
+    sub ecx, '0' ; "convert" character to number
+    imul eax, 10 ; multiply "result so far" by ten
+    add eax, ecx ; add in current digit
+    jmp .top ; until done
+.done:
+    ret
+
+int_parser ENDP
 
 END
