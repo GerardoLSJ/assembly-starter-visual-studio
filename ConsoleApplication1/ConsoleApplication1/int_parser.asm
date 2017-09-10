@@ -5,7 +5,7 @@
 string_input DB "12345",0h
 len equ $ - string_input
 result DD 00000000,0h
-temp DB 00000000,0h
+temp DD 1,0h
 .CODE
 ;ebx : contadpr
                             ;EXAMPLE: -2 == 0xFFFF FFFE
@@ -28,8 +28,15 @@ for_loop:
 	sub cl, '0'				;ELSE is a number
 	;mov [edx + ebx], cl		; Guarda el "NUMERO" en la direccion de memoria indicada
 	mov esi, ecx
-	imul esi,10
+	imul esi,[temp]
+
 	add result, esi
+
+	xor esi,esi
+	mov esi, [temp]
+	imul esi,10
+	lea edi, temp
+	mov [edi], esi 
 	dec ebx					; counter ++
 	
 	mov esi, [eax + ebx - 1]		;Vemos si sigue un 0
