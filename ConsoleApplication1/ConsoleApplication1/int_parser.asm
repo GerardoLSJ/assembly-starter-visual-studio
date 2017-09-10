@@ -4,7 +4,7 @@
 .DATA
 string_input DB "12345",0h
 len equ $ - string_input
-result DB 00000000,0h
+result DD 00000000,0h
 temp DB 00000000,0h
 .CODE
 ;ebx : contadpr
@@ -27,14 +27,13 @@ for_loop:
 
 	sub cl, '0'				;ELSE is a number
 	;mov [edx + ebx], cl		; Guarda el "NUMERO" en la direccion de memoria indicada
-	movzx  cx , cl
-	mov temp, cl
-	imul temp, 10
-	add result, temp
+	mov esi, ecx
+	imul esi,10
+	add result, esi
 	dec ebx					; counter ++
 	
-	mov ch, [eax + ebx - 1]		;Vemos si sigue un 0
-	cmp ch, 0				;compara si es 0 en esa localidad de memoria
+	mov esi, [eax + ebx - 1]		;Vemos si sigue un 0
+	cmp esi, 0				;compara si es 0 en esa localidad de memoria
 	jne for_loop			;jump not equal
 	ret
 
