@@ -11,14 +11,18 @@ temp DD 1,0h
                             ;EXAMPLE: -2 == 0xFFFF FFFE
 int_parser PROC
 	mov ecx, len 
-	lea eax, string_input	;load effective adress of this.string
+	mov eax,1
+	;lea eax, string_input	;load effective adress of this.string
+	;vamos a usar un registro tempral para leer strin_input
+
 	lea edx, result			;load effective adress of result
 	mov ebx, len-2			;Contador
 	;mov ecx, [eax + ebx]	;Para ver si es signo	
 	;call checkSign			;Checar el signo
 
 for_loop:
-	mov cl, [eax + ebx]		;Tomamos el primer char porque [CX, CH, CL] 16 bits, 8 bits, 8 bits 
+	lea edi, string_input
+	mov cl, [edi + ebx]		;Tomamos el primer char porque [CX, CH, CL] 16 bits, 8 bits, 8 bits 
 
 	cmp  cl, '0' 			; Validate is a number in this intercal 
 	jb lessZero				; oterwise finish JA, JB when comparing unsigned integers,
@@ -28,18 +32,20 @@ for_loop:
 	sub cl, '0'				;ELSE is a number
 	;mov [edx + ebx], cl		; Guarda el "NUMERO" en la direccion de memoria indicada
 	mov esi, ecx
-	imul esi,[temp]
+	;imul esi,[temp]
+	imul esi, eax			; multiplicar ecx por 1,10,100,1000
 
 	add result, esi
 
 	xor esi,esi
-	mov esi, [temp]
-	imul esi,10
-	lea edi, temp
-	mov [edi], esi 
+	mov esi, eax			;mover 1,10 a esi para multiplicar
+	imul esi,10				;
+	;lea edi, temp
+	mov eax, esi 			; mover el 10,100,1000 a EAX
 	dec ebx					; counter ++
 	
-	mov esi, [eax + ebx - 1]		;Vemos si sigue un 0
+	lea edi, string_input
+	mov esi, [edi + ebx - 1]		;Vemos si sigue un 0
 	cmp esi, 0				;compara si es 0 en esa localidad de memoria
 	jne for_loop			;jump not equal
 	ret
