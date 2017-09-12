@@ -3,11 +3,11 @@
 .STACK
 .DATA
 ;el numero ingresado termina en 0h PLOX
-string_input DB "12345",0h
+string_input DB "-123",0h
 len equ $ - string_input 	;reescribir
 result DD 00000000,0h
 temp DD 1,0h
-success DD 1,0h,
+success DD 1,0h
 negativo DD 0,0h
 .CODE
 ;ebx : contadpr
@@ -55,31 +55,35 @@ for_loop:
 
 lessZero:
 	xor ecx,ecx		;end 
-	jecxz done 
+	; terminamos, vamos a checar si hubo signo
+	call checkSign
+	ret
 	
 greaterNine:
 	xor ecx,ecx		;end
-	jecxz done
+	; terminamos, vamos a checar si hubo signo
+	call checkSign
+	ret
 
 checkSign:
-	cmp  cl, '+'
+	lea edi, string_input
+	mov cl, [edi]
+	cmp  cl, 2bh
 	je positiveNumber
-	cmp  cl, '-'
+	cmp  cl,2dh
 	je negativeNumber
 	ret
 
 positiveNumber:
 	; encender bandera de que es un numero positivo
-	xor ecx,ecx
-	dec ebx						;counter ++
-	;mov cl, [eax + ebx]		;Tomamos el siguiete valor porque fue signo
+	; no hacemos nada
+	
 	ret
-
+jmp done
 negativeNumber:
-	; encender bandera de que es un numero positivo
-	xor ecx,ecx
-	dec ebx					;counter ++
-	;mov cl, [eax + ebx]		;Tomamos el siguiete valor porque fue signo
+	; negamos la respuesta
+	neg result
+	jmp done
 	ret
 
 done:
