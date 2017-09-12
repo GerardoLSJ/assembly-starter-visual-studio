@@ -2,10 +2,13 @@
 .MODEL FLAT, C
 .STACK
 .DATA
+;el numero ingresado termina en 0h PLOX
 string_input DB "12345",0h
-len equ $ - string_input
+len equ $ - string_input 	;reescribir
 result DD 00000000,0h
 temp DD 1,0h
+success DD 1,0h,
+negativo DD 0,0h
 .CODE
 ;ebx : contadpr
                             ;EXAMPLE: -2 == 0xFFFF FFFE
