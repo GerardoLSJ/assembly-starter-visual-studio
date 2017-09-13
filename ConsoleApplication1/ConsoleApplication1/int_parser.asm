@@ -6,8 +6,7 @@
 .STACK
 .DATA
 ;el numero ingresado termina en 0h PLOX
-string_input DB "+10",0h
-len equ $ - string_input 	;reescribir
+string_input DB "-1a0",0h
 result DD 00000000,0h
 success DD 1,0h
 .CODE
@@ -27,7 +26,6 @@ len_string:
 
 end_len:
 	;sub ebx,1
-	mov ecx, len 
 	mov eax,1					;multiplicador 1, 10, 1000
 	;vamos a usar un registro tempral para leer strin_input
 	lea edx, result			;load effective adress of result
@@ -58,7 +56,8 @@ for_loop:
 	mov esi, [edi + ebx - 1]	;Vemos si sigue un 0
 	cmp esi, 0					;compara si es 0 en esa localidad de memoria
 	jne for_loop				;jump not equal
-	;BREAKPOINT H E R E
+	;---------------
+	jmp done
 	ret
 
 lessZero:
@@ -70,6 +69,8 @@ lessZero:
 	jne errorchar
 	; terminamos, vamos a checar si hubo signo
 	call checkSign
+	;---------------
+	jmp done
 	ret
 	
 greaterNine:
@@ -81,6 +82,8 @@ greaterNine:
 	jne errorchar
 	; terminamos, vamos a checar si hubo signo
 	call checkSign
+	;---------------
+	jmp done
 	ret
 
 checkSign:
@@ -90,25 +93,25 @@ checkSign:
 	je positiveNumber
 	cmp  cl,2dh
 	je negativeNumber
-	;BREAKPOINT H E R E	
+	;----------------
 	ret
 
 positiveNumber:
 	; no hacemos nada
-	;BREAKPOINT H E R E
-	ret
+	;---------------
 	jmp done
+	ret
 negativeNumber:
 	; negamos la respuesta
 	neg result
-
-	;BREAKPOINT H E R E
+	;---------------
 	jmp done
 	ret
 
 errorchar:
 	mov success,0
-	;BREAKPOINT H E R E
+	;---------------
+	jmp done
 	ret
 	
 
