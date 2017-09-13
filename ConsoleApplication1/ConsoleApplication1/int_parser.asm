@@ -1,9 +1,12 @@
+; Luis Gerardo Lopez Santibañez Jimenez
+
+
 .586
 .MODEL FLAT, C
 .STACK
 .DATA
 ;el numero ingresado termina en 0h PLOX
-string_input DB "-123456789",0h
+string_input DB "+10",0h
 len equ $ - string_input 	;reescribir
 result DD 00000000,0h
 success DD 1,0h
@@ -55,10 +58,14 @@ for_loop:
 	mov esi, [edi + ebx - 1]	;Vemos si sigue un 0
 	cmp esi, 0					;compara si es 0 en esa localidad de memoria
 	jne for_loop				;jump not equal
+	;BREAKPOINT H E R E
 	ret
 
 lessZero:
 	xor ecx,ecx					;end 
+	sub ecx, 1
+	cmp ebx,ecx
+	je done
 	cmp ebx, 0					;Checamos si nuestro contador esta en 0 si no no deberias 
 	jne errorchar
 	; terminamos, vamos a checar si hubo signo
@@ -67,6 +74,9 @@ lessZero:
 	
 greaterNine:
 	xor ecx,ecx					;end
+	sub ecx, 1
+	cmp ebx,ecx
+	je done
 	cmp ebx, 0					;Checamos si nuestro contador esta en 0 si no no deberias 
 	jne errorchar
 	; terminamos, vamos a checar si hubo signo
@@ -80,24 +90,30 @@ checkSign:
 	je positiveNumber
 	cmp  cl,2dh
 	je negativeNumber
+	;BREAKPOINT H E R E	
 	ret
 
 positiveNumber:
 	; no hacemos nada
+	;BREAKPOINT H E R E
 	ret
 	jmp done
 negativeNumber:
 	; negamos la respuesta
 	neg result
+
+	;BREAKPOINT H E R E
 	jmp done
 	ret
 
 errorchar:
 	mov success,0
+	;BREAKPOINT H E R E
 	ret
 	
 
 done:
+;BREAKPOINT H E R E
 	ret
 int_parser ENDP
 
