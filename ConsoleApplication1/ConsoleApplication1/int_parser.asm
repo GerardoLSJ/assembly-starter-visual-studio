@@ -6,7 +6,10 @@
 .STACK
 .DATA
 ;el numero ingresado termina en 0h PLOX
+; PONER BREAKPOINT AL FINAL donde dice "breakpoint here" para ver memoria
+;-----------------------
 string_input DB "-1a0",0h
+;-----------------------
 result DD 00000000,0h
 success DD 1,0h
 .CODE
