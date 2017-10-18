@@ -1,0 +1,13 @@
+﻿  stdafx.cpp
+  ColorToGray.cpp
+ColorToGray.cpp(57): warning C4244: 'inicializando': conversión de 'int64' a 'int'; posible pérdida de datos
+ColorToGray.cpp(85): warning C4244: 'inicializando': conversión de 'int64' a 'int'; posible pérdida de datos
+ColorToGray.cpp(90): warning C4244: 'inicializando': conversión de 'int64' a 'int'; posible pérdida de datos
+ColorToGray.cpp(97): warning C4244: 'inicializando': conversión de 'int64' a 'int'; posible pérdida de datos
+ColorToGray.cpp(101): warning C4244: '=': conversión de 'int64' a 'long'; posible pérdida de datos
+ColorToGray.cpp(103): warning C4244: '=': conversión de 'int64' a 'long'; posible pérdida de datos
+  Generando código
+  All 208 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Generación de código finalizada
+  ColorToGray.vcxproj -> C:\Users\Gerry\Desktop\prof\Release\ColorToGray.exe
+  ColorToGray.vcxproj -> C:\Users\Gerry\Desktop\prof\Release\ColorToGray.pdb (Full PDB)
