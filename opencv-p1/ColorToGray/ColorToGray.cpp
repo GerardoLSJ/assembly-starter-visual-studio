@@ -34,26 +34,29 @@ void gaussianBlur() {
 	int* pix_addr = (int*)malloc((2 * kernel_size + 1) * (2 * kernel_size + 1) * sizeof(int));
 
 
-
+	
 	int i =  kernel_size;
 	int j=  kernel_size;
 	int k1	= -kernel_size;
 	int k2	= -kernel_size;
+
+	//DEBUG
 	int contador = 0;
 	int contador_j = 0;
 	int contador_k1 = 0;
 	int contador_k2 = 0;
+	//DEBUG
+
+	//ADDRESS
+	int pix_x = 0;
+	int pix_y = 0;
+	int k_x = 0;
+	int k_y = 0;
+	int parte_1 = 0;
+	int parte_2 = 0;
+	int parte_3 = 0;
 	float suma = 0.0;
 
-	/*
-	
-		mov ecx, kernel_size
-		mov j, ecx
-
-		neg ecx
-		mov k1, ecx
-		mov k2, ecx
-		*/
 
 	__asm {
 	main:
@@ -65,8 +68,8 @@ void gaussianBlur() {
 		; // IF i = 0, jmp 	
 
 		mov eax, i
-		mov ebx, 7;//img_original.rows	 ;// para checar el valor sin comprometer ebx
-		;//sub ebx, kernel_size
+		mov ebx, img_original.rows	 ;// para checar el valor sin comprometer ebx
+		sub ebx, kernel_size
 		cmp eax, ebx
 		je end_loop
 		inc eax			;//Incrementar i++
@@ -83,8 +86,8 @@ void gaussianBlur() {
 		
 		//xor eax, eax
 		mov eax, j
-		mov ebx, 7;//img_original.cols
-		;//sub ebx, kernel_size
+		mov ebx, img_original.cols
+		sub ebx, kernel_size
 		cmp eax, ebx
 		je for_i
 		inc eax			;//j++
@@ -126,9 +129,42 @@ void gaussianBlur() {
 		inc eax			;//j++
 		mov k2, eax
 
-		mov ecx, contador_k2
-		inc ecx
-		mov contador_k2, ecx
+		;//int pix_x = i + k1;
+		mov eax, i
+		add eax, k1
+		mov pix_x, eax
+		;//int pix_y = j + k2;
+		mov eax, j
+		add eax, k2
+		mov pix_y, eax
+		;//int k_x = k1 + kernel_size;
+		mov eax, k1
+		add eax, kernel_size
+		mov k_x, eax
+		;//int k_y = k2 + kernel_size;
+		mov eax, k2
+		add eax, kernel_size
+		mov k_y, eax
+		;//int parte_1 = pix_x * img_original.cols + pix_y
+		mov eax, pix_x
+		mov ebx, img_original.cols
+		imul eax,ebx
+		add eax, pix_y
+		mov parte_1, eax
+		;//int parte_2 = k_x*(2 * kernel_size + 1) + k_y
+		mov eax, kernel_size
+		imul eax, 2
+		add eax, 1
+		mov ebx, k_x
+		imul eax, ebx
+		add eax, k_y
+		mov parte_2, eax
+		;//int parte_3 = img_original.data[parte_1] * kernel[parte_2] <<<---- KERNEL float
+		lea eax, img_original.data
+		add eax, parte_1
+		lea ebx, kernel
+		add ebx, parte_2
+		
 
 		jmp for_k2
 		
@@ -145,6 +181,7 @@ void gaussianBlur() {
 		xor edi, edi
 
 	}
+	
 
 	/*
 	for (int i = kernel_size; i < img_original.rows - kernel_size; i++) {
@@ -169,8 +206,8 @@ void gaussianBlur() {
 
 		}
 	}
-	*/
-
+	
+*/
 	/*
 	
 			
