@@ -33,14 +33,147 @@ void gaussianBlur() {
 
 	int* pix_addr = (int*)malloc((2 * kernel_size + 1) * (2 * kernel_size + 1) * sizeof(int));
 
-	__asm {
-		; EDI Direccion de memoria del pixel actual
-		; ESI Direccion del pixel de alrededor
-		; EBP Datos en el kernel
-		; int i, j, k1, k2
-		; EAX indeces actuales
 
+
+	int i =  kernel_size;
+	int j=  kernel_size;
+	int k1	= -kernel_size;
+	int k2	= -kernel_size;
+	int contador = 0;
+	int contador_j = 0;
+	int contador_k1 = 0;
+	int contador_k2 = 0;
+	float suma = 0.0;
+
+	/*
+	
+		mov ecx, kernel_size
+		mov j, ecx
+
+		neg ecx
+		mov k1, ecx
+		mov k2, ecx
+		*/
+
+	__asm {
+	main:
+
+
+	for_i:
+		mov ecx, kernel_size
+		mov j, ecx
+		; // IF i = 0, jmp 	
+
+		mov eax, i
+		mov ebx, 7;//img_original.rows	 ;// para checar el valor sin comprometer ebx
+		;//sub ebx, kernel_size
+		cmp eax, ebx
+		je end_loop
+		inc eax			;//Incrementar i++
+		mov i, eax		;//Asignar
+
+		mov ecx, contador
+		inc ecx
+		mov contador, ecx
+	
+	for_j:
+		mov ecx, kernel_size
+		neg ecx
+		mov k1, ecx
 		
+		//xor eax, eax
+		mov eax, j
+		mov ebx, 7;//img_original.cols
+		;//sub ebx, kernel_size
+		cmp eax, ebx
+		je for_i
+		inc eax			;//j++
+		mov j, eax
+
+		mov ecx, contador_j
+		inc ecx
+		mov contador_j, ecx
+		
+		
+
+
+
+	;//for (int k1 = -kernel_size; k1 <= kernel_size; k1++) {
+	for_k1:
+		mov ecx, kernel_size
+		neg ecx
+		mov k2, ecx
+
+		mov eax, k1
+		mov ebx, kernel_size
+		cmp eax, ebx
+		je for_j
+
+		inc eax			;//j++
+		mov k1, eax
+
+		mov ecx, contador_k1
+		inc ecx
+		mov contador_k1, ecx
+
+
+	for_k2:
+		mov eax, k2
+		mov ebx, kernel_size
+		cmp eax, ebx
+		je for_k1
+
+		inc eax			;//j++
+		mov k2, eax
+
+		mov ecx, contador_k2
+		inc ecx
+		mov contador_k2, ecx
+
+		jmp for_k2
+		
+
+	end_loop:
+		mov eax, img_original.rows
+		mov ebx, contador
+		;//add ebx, 4
+		mov ecx, img_original.cols
+		mov edx, contador_j
+		mov edi, 4
+		imul edi,img_original.rows
+		;//add edx, edi
+		xor edi, edi
+
+	}
+
+	/*
+	for (int i = kernel_size; i < img_original.rows - kernel_size; i++) {
+		for (int j = kernel_size; j < img_original.cols - kernel_size; j++) {
+			float suma = 0.0;
+
+			for (int k1 = -kernel_size; k1 <= kernel_size; k1++) {
+				for (int k2 = -kernel_size; k2 <= kernel_size; k2++) {
+					int pix_x = i + k1;
+					int pix_y = j + k2;
+					int k_x = k1 + kernel_size;
+					int k_y = k2 + kernel_size;
+
+					suma += img_original.data[pix_x * img_original.cols + pix_y] * kernel[k_x*(2 * kernel_size + 1) + k_y];
+
+
+				}
+			}
+
+			img_blur.data[i * img_original.cols + j] = (int)suma;
+
+
+		}
+	}
+	*/
+
+	/*
+	
+			
 get_addresses :
 		mov ebp, pix_addr
 		mov esi, kernel_size
@@ -73,32 +206,6 @@ get_addresses :
 
 
 
-
-	}
-
-	/*
-	for (int i = kernel_size; i < img_original.rows - kernel_size; i++) {
-		for (int j = kernel_size; j < img_original.cols - kernel_size; j++) {
-			float suma = 0.0;
-
-			for (int k1 = -kernel_size; k1 <= kernel_size; k1++) {
-				for (int k2 = -kernel_size; k2 <= kernel_size; k2++) {
-					int pix_x = i + k1;
-					int pix_y = j + k2;
-					int k_x = k1 + kernel_size;
-					int k_y = k2 + kernel_size;
-
-					suma += img_original.data[pix_x * img_original.cols + pix_y] * kernel[k_x*(2 * kernel_size + 1) + k_y];
-
-
-				}
-			}
-
-			img_blur.data[i * img_original.cols + j] = (int)suma;
-
-
-		}
-	}
 	*/
 
 	//cv::namedWindow("blur Image");
