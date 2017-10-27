@@ -12,7 +12,7 @@ cv::Mat img_grayscale_asm;
 cv::Mat img_blur;
 
 void gaussianBlur() {
-	img_original = cv::imread("Lena.jpg", CV_LOAD_IMAGE_COLOR);
+	img_original = cv::imread("ColorTest.jpg", CV_LOAD_IMAGE_COLOR);
 	cv::cvtColor(img_original, img_original, cv::COLOR_BGR2GRAY);
 
 	std::cout << "DATA FOR THE ORIGINAL IMAGE:" << std::endl;
@@ -56,6 +56,8 @@ void gaussianBlur() {
 	int parte_2 = 0;
 	int parte_3 = 0;
 	float suma = 0.0;
+	int int_aux = 0;
+	float aux = 0.0;
 
 
 	__asm {
@@ -157,14 +159,35 @@ void gaussianBlur() {
 		add eax, 1
 		mov ebx, k_x
 		imul eax, ebx
+		
+		imul eax, 8
+
 		add eax, k_y
+
+	
+
 		mov parte_2, eax
 		;//int parte_3 = img_original.data[parte_1] * kernel[parte_2] <<<---- KERNEL float
-		lea eax, img_original.data
+	
+		mov ebx, img_original.data
+		add ebx, parte_1
+		xor ecx, ecx
+		mov cl, [ebx]
+		mov int_aux, ecx
+		fild int_aux		; Load 32 - bit DWORD value at top of stack to ST(0)
+
+		mov ebx,kernel
+		add ebx, parte_2
+		mov eax, [ebx]
+		fld [ebx];//LOAD kernel[PARTE_2]
+
+		xor edx, edx
 		add eax, parte_1
 		lea ebx, kernel
 		add ebx, parte_2
 		
+		ffree st(0)
+		ffree st(1)
 
 		jmp for_k2
 		
@@ -367,5 +390,235 @@ int main()
 
 	}
 	return 0;
+
+	/*
+	void gaussianBlurASM()
+{
+	img_original = cv::imread("Lena.jpg", CV_LOAD_IMAGE_COLOR);
+	cv::cvtColor(img_original, img_original, cv::COLOR_BGR2GRAY);
+
+	std::cout << "DATA FOR THE ORIGINAL IMAGE:" << std::endl;
+	std::cout << "Image width= " << img_original.cols << std::endl;
+	std::cout << "Image height= " << img_original.rows << std::endl;
+	std::cout << "Number of channels= " << img_original.channels() << std::endl;
+	std::cout << "Element size in bytes= " << img_original.elemSize() << std::endl;
+	std::cout << "Row size in bytes= " << img_original.step << std::endl;
+
+	img_blur_asm = cv::Mat(img_original.rows, img_original.cols, CV_8UC1); //8 bits unsigned chanel 1 
+	int kernel_size = 2;
+	int kernel_length = 4 * kernel_size*kernel_size + 4 * kernel_size + 1;
+	float* kernel = (float*)malloc(kernel_length * sizeof(float));
+
+	int * pix_addr = (int*)malloc(kernel_length * sizeof(int)); //guarda las direcciones de memoria de la matriz kernel
+
+	for (int i = 0; i <kernel_length; i++) {
+		kernel[i] = float(1.0) / (kernel_length);
+		std::cout << "ki:" << kernel[i] <<std::endl;
+		
+	}
+	
+	int i = kernel_size-1;
+	int j = kernel_size-1;
+	int k1 = -kernel_size-1;
+	int k2 = -kernel_size-1;
+
+	int pix_x = 0;
+	int pix_y = 0;
+	int k_x = 0;
+	int k_y = 0;
+	int pix_aux = 0;
+	int ki = 0;
+	float suma = 0.0;
+
+	__asm
+	{
+		main:
+
+			CALL for_i
+
+			JMP fin
+
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+		for_i:; recorre filas i
+
+			MOV ecx, i; se carga i se incrementa y se regresa
+			INC ecx
+			MOV i, ecx
+
+			CALL for_j
+
+			MOV eax, img_original.rows; se cargan los datos para realizar la comparacion
+			MOV edx, kernel_size
+			SUB eax, edx
+
+			; se reinicia j
+			MOV edx, kernel_size
+			DEC edx
+			MOV j, edx
+			MOV ecx, i
+
+					; CMP i < img_original.rows - kernel_size
+			CMP eax, ecx
+			JNL for_i
+
+			ret
+
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+		  for_j:; recorre cols j
+
+			  MOV ecx, j; se carga j se incrementa y se regresa
+			  INC ecx
+			  MOV j, ecx
+
+			  FLDZ; se carga un 0 a la pila de float para suma = 0
+
+			  CALL for_k1
+
+			  MOV ecx, i; se carga i, j, cols, y la direccion de img_blur
+			  MOV edx, j
+			  MOV eax, img_original.cols
+			  MOV ebx, img_blur_asm.data
+
+			  IMUL eax, ecx; se hace la multuplicacion de cols * i
+			  ADD eax, edx; se suma j a la multiplicacion
+
+			  ; cargar de st0 a suma
+			  FISTP suma
+			  XOR edx, edx
+			  MOV edx, suma
+
+			  MOV[ebx + eax], dl; se guarda suma a la dirccion en img_blur
+			  ; img_blur.data[i * img_original.cols + j] = (int)suma
+			  MOV ki,0
+			  ; se reinicia k1
+			  MOV ecx, kernel_size
+			  NEG ecx
+			  DEC ecx
+			  MOV k1, ecx
+
+			  MOV eax, img_original.cols; se cargan los datos para realizar la comparacion
+			  MOV edx, kernel_size
+			  SUB eax, edx
+			  MOV ecx, j
+
+			  ; CMP j < img_original.cols - kernel_size
+			  CMP eax, ecx
+			  JNL for_j
+
+			  ret
+
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+			for_k1:
+
+				MOV ecx, k1; se carga k1 se incrementa y se regresa
+				INC ecx
+				MOV k1, ecx
+
+				CALL for_k2
+
+				; se reinicia k2
+				MOV ecx, kernel_size
+				NEG ecx
+				DEC ecx
+				MOV k2, ecx
+
+				MOV ecx, k1
+				MOV eax, kernel_size
+					
+					; CMP k1 <= kernel_size
+				CMP eax,ecx
+				JNLE for_k1
+
+				ret
+
+		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+			for_k2:
+
+				MOV ecx, k2; se carga k2 se incrementa y se regresa
+				INC ecx
+				MOV k2, ecx
+
+				; pix_x = i + k1
+				MOV eax, i
+				MOV ebx, k1
+
+				ADD eax, ebx
+				MOV pix_x, eax
+
+				; pix_y = j + k2;
+				MOV eax, j
+
+				ADD eax, ecx
+				MOV pix_y, eax
+
+				; k_x = k1 + kernel_size;
+				MOV edx, kernel_size
+				MOV eax, k1
+				ADD eax, edx
+				MOV k_x, eax
+
+				; k_y = k2 + kernel_size;
+				MOV edx, kernel_size
+				MOV eax, k2
+				ADD eax, edx
+				MOV k_y, eax
+
+				;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+				; suma += img_original.data[pix_x * img_original.cols + pix_y] * kernel[k_x*(2 * kernel_size + 1) + k_y]
+				; kernel[k_x*(2 * kernel_size + 1) + k_y]
+				MOV esi, kernel
+				MOV edx, ki
+				ADD esi, edx ;-----------------> direccion del valor que se saca de kernel
+
+				ADD edx,4
+				MOV ki, edx
+					
+				; img_original.data[pix_x * img_original.cols + pix_y]
+				MOV eax, pix_x
+				MOV ebx, pix_y
+				MOV ecx, img_original.cols
+
+				IMUL eax, ecx
+				ADD eax, ebx	;ya no mas operaciones
+
+				MOV edi, img_original.data
+				ADD edi, eax;----------------->direccion del valor que se saca de la imagen
+
+					;;;;;; Hay que sacar el valor de suma, luego kenrel  y ponerlos en st
+					;meter el valor de img_original en st y multiplic kernel con img
+					;se hace ADD del resultaod a suma TODO ESTO ES EN FLOTANTES O SE CASTEA
+					
+				FLD [esi]; carga el valor de kernel
+				XOR eax, eax
+				MOV al, [edi]
+				MOV pix_aux, eax
+				FILD [pix_aux] ;carga el valor del pixel
+
+				FMULP st(1), st(0)
+				FADDP st(1), st(0)
+
+				MOV eax, k2
+				MOV ebx, kernel_size
+
+				; CMP k2 <= kernel_size
+				CMP  ebx, eax
+				JNLE for_k2
+
+				ret
+		fin:
+				NOP
+	}
+	
+	
+	cv::imshow("Original Image", img_original);
+	cv::imshow("blur", img_blur_asm);
+	//cv::imshow("blur", img_blur_asm);
+}
+	*/
 }
 
