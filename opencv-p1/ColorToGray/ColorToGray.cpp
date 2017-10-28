@@ -10,9 +10,10 @@ cv::Mat img_grayscale;
 cv::Mat img_grayscale_cpp;
 cv::Mat img_grayscale_asm;
 cv::Mat img_blur;
+cv::Mat img_blur_asm;
 
 void gaussianBlur() {
-	img_original = cv::imread("ColorTest.jpg", CV_LOAD_IMAGE_COLOR);
+	img_original = cv::imread("Lena.jpg", CV_LOAD_IMAGE_COLOR);
 	cv::cvtColor(img_original, img_original, cv::COLOR_BGR2GRAY);
 
 	std::cout << "DATA FOR THE ORIGINAL IMAGE:" << std::endl;
@@ -23,7 +24,9 @@ void gaussianBlur() {
 	std::cout << "Row size in bytes= " << img_original.step << std::endl;
 
 	img_blur = cv::Mat(img_original.rows, img_original.cols, CV_8UC1); //8 bits unsigned chanel 1 
-	int kernel_size = 2;
+	img_blur_asm = cv::Mat(img_original.rows, img_original.cols, CV_8UC1); //8 bits unsigned chanel 1 
+
+	int kernel_size = 12;
 	int kernel_length = 4 * kernel_size*kernel_size + 4 * kernel_size + 1;
 	float* kernel = (float*)malloc(kernel_length * sizeof(float));
 
@@ -35,11 +38,12 @@ void gaussianBlur() {
 
 
 	
+
+	/**
 	int i =  kernel_size;
 	int j=  kernel_size;
 	int k1	= -kernel_size;
 	int k2	= -kernel_size;
-
 	//DEBUG
 	int contador = 0;
 	int contador_j = 0;
@@ -58,150 +62,162 @@ void gaussianBlur() {
 	float suma = 0.0;
 	int int_aux = 0;
 	float aux = 0.0;
+	*/
+	int i = kernel_size - 1;
+	int j = kernel_size - 1;
+	int k1 = -kernel_size - 1;
+	int k2 = -kernel_size - 1;
 
+	int pix_x = 0;
+	int pix_y = 0;
+	int k_x = 0;
+	int k_y = 0;
+	int pix_aux = 0;
+	int offset_data = 0;
+	float suma = 0.0;
 
 	__asm {
 	main:
-
-
+		call for_i
+		jmp end_loop;// end program
 	for_i:
-		mov ecx, kernel_size
-		mov j, ecx
-		; // IF i = 0, jmp 	
-
 		mov eax, i
-		mov ebx, img_original.rows	 ;// para checar el valor sin comprometer ebx
-		sub ebx, kernel_size
-		cmp eax, ebx
-		je end_loop
-		inc eax			;//Incrementar i++
-		mov i, eax		;//Asignar
+		inc eax;//Incrementar i++
+		mov i, eax;//Asignar
 
-		mov ecx, contador
-		inc ecx
-		mov contador, ecx
-	
+		call for_j
+		;;;;//RETURN
+		mov edx, kernel_size
+		dec edx
+		mov j, edx;//termino la vuelta j
+
+		mov eax, img_original.rows;// para checar el valor sin atar a registro EAX 
+		sub eax, kernel_size;// img_original.rows - kernel_size
+
+		mov ecx, i
+		cmp eax, ecx;// IF i < img_original.rows - kernel_size
+		jnl for_i
+		ret;// end call
+
 	for_j:
-		mov ecx, kernel_size
-		neg ecx
-		mov k1, ecx
-		
-		//xor eax, eax
-		mov eax, j
-		mov ebx, img_original.cols
-		sub ebx, kernel_size
-		cmp eax, ebx
-		je for_i
-		inc eax			;//j++
+		mov eax, j;//j++
+		inc eax
 		mov j, eax
 
-		mov ecx, contador_j
-		inc ecx
-		mov contador_j, ecx
-		
-		
+		fldz;//para suma, sto=0.0
+
+		call for_k1
+			;;;;//RETURN
+
+		mov ecx, i
+		mov edx, j
+		mov eax, img_original.cols
+		mov ebx, img_blur_asm.data
+
+		imul eax, ecx;// cols*i
+		add eax, edx;// (cols*i + j)
+
+		fistp suma;//valor de suma
+		xor edx, edx;// porque vamos a usar solo 8 bits
+		mov edx, suma
+		mov[ebx + eax], dl;// img_blur.data [cols*i + j] = suma (8 bits)
+
+		mov offset_data, 0
 
 
+		mov ecx, kernel_size;// k1 = -kernel_size
+		neg ecx
+		dec ecx
+		mov k1, ecx
 
-	;//for (int k1 = -kernel_size; k1 <= kernel_size; k1++) {
+		mov eax, img_original.cols
+		mov edx, kernel_size
+		sub eax, edx
+		mov ecx, j
+
+		cmp eax, ecx;// IF j < img_orig.cols - kernel_size
+		jnl for_j
+		ret;// end call
 	for_k1:
+		mov ecx, k1
+		inc ecx
+		mov k1, ecx;// k1++
+
+		call for_k2
+			;;;//RETURN
 		mov ecx, kernel_size
 		neg ecx
+		dec ecx
 		mov k2, ecx
 
-		mov eax, k1
-		mov ebx, kernel_size
-		cmp eax, ebx
-		je for_j
+		mov ecx, k1
+		mov eax, kernel_size
 
-		inc eax			;//j++
-		mov k1, eax
-
-		mov ecx, contador_k1
-		inc ecx
-		mov contador_k1, ecx
-
-
+		cmp eax, ecx;// IF k1 <= kernel_size
+		jnle for_k1;//Jump if not less or equal
+		ret;// end call
 	for_k2:
-		mov eax, k2
-		mov ebx, kernel_size
-		cmp eax, ebx
-		je for_k1
-
-		inc eax			;//j++
-		mov k2, eax
+		mov ecx, k2
+		inc ecx
+		mov k2, ecx;// k2++
 
 		;//int pix_x = i + k1;
 		mov eax, i
-		add eax, k1
+		mov ebx, k1
+		add eax, ebx
 		mov pix_x, eax
 		;//int pix_y = j + k2;
 		mov eax, j
-		add eax, k2
+		add eax, ecx
 		mov pix_y, eax
 		;//int k_x = k1 + kernel_size;
+		mov edx, kernel_size
 		mov eax, k1
-		add eax, kernel_size
+		add eax, edx
 		mov k_x, eax
 		;//int k_y = k2 + kernel_size;
+		mov edx, kernel_size
 		mov eax, k2
-		add eax, kernel_size
+		add eax, edx
 		mov k_y, eax
-		;//int parte_1 = pix_x * img_original.cols + pix_y
+
+		;// suma += img_original.data[pix_x * img_original.cols + pix_y] * kernel[k_x*(2 * kernel_size + 1) + k_y]
+		;// kernel[k_x*(2 * kernel_size + 1) + k_y]
+
+		mov esi, kernel
+		mov edx, offset_data
+		add esi, edx;// !!! Direccion dentro de KERNEL FLOAT
+		add edx, 4
+		mov offset_data, edx
+
+		;// img_original.data[pix_x * img_original.cols + pix_y]
 		mov eax, pix_x
-		mov ebx, img_original.cols
-		imul eax,ebx
-		add eax, pix_y
-		mov parte_1, eax
-		;//int parte_2 = k_x*(2 * kernel_size + 1) + k_y
-		mov eax, kernel_size
-		imul eax, 2
-		add eax, 1
-		mov ebx, k_x
-		imul eax, ebx
-		
-		imul eax, 8
+		mov ebx, pix_y
+		mov ecx, img_original.cols
+		imul eax, ecx
+		add eax, ebx;// img_original.data[pix_x * img_original.cols + pix_y]
 
-		add eax, k_y
+		mov edi, img_original.data
+		add edi, eax;// Direccion del valor donde esta el pixel
 
-	
+		fld[esi];// valor de img.data[direccion]
+		xor eax, eax
+		mov al, [edi];//mov solo 8 bits
+		mov pix_aux, eax;//auxiliar para poder cargar en la FLD
 
-		mov parte_2, eax
-		;//int parte_3 = img_original.data[parte_1] * kernel[parte_2] <<<---- KERNEL float
-	
-		mov ebx, img_original.data
-		add ebx, parte_1
-		xor ecx, ecx
-		mov cl, [ebx]
-		mov int_aux, ecx
-		fild int_aux		; Load 32 - bit DWORD value at top of stack to ST(0)
+		fild[pix_aux];// INT pixel en FLOAT
+		fmulp st(1), st(0)
+		faddp st(1), st(0);// se queda en ST hasta que lo sacamos en for_j
 
-		mov ebx,kernel
-		add ebx, parte_2
-		mov eax, [ebx]
-		fld [ebx];//LOAD kernel[PARTE_2]
+		mov eax, k2
+		mov ebx, kernel_size
+		cmp  ebx, eax; IF k2 <= kernel_size
+		jnle for_k2
+		ret;// end call
 
-		xor edx, edx
-		add eax, parte_1
-		lea ebx, kernel
-		add ebx, parte_2
-		
-		ffree st(0)
-		ffree st(1)
-
-		jmp for_k2
-		
 
 	end_loop:
-		mov eax, img_original.rows
-		mov ebx, contador
-		;//add ebx, 4
-		mov ecx, img_original.cols
-		mov edx, contador_j
-		mov edi, 4
-		imul edi,img_original.rows
-		;//add edx, edi
-		xor edi, edi
+		nop;// end program 
 
 	}
 	
@@ -270,6 +286,8 @@ get_addresses :
 
 	//cv::namedWindow("blur Image");
 	cv::imshow("Original Image", img_original);
+	cv::imshow("img_blur_asm ", img_blur_asm);
+	
 	/*cv::imshow("blur", img_blur);
 	std::cout << "DATA FOR THE ORIGINAL IMAGE:" << std::endl;
 	std::cout << "Image width= " << img_blur.cols << std::endl;
@@ -391,234 +409,6 @@ int main()
 	}
 	return 0;
 
-	/*
-	void gaussianBlurASM()
-{
-	img_original = cv::imread("Lena.jpg", CV_LOAD_IMAGE_COLOR);
-	cv::cvtColor(img_original, img_original, cv::COLOR_BGR2GRAY);
 
-	std::cout << "DATA FOR THE ORIGINAL IMAGE:" << std::endl;
-	std::cout << "Image width= " << img_original.cols << std::endl;
-	std::cout << "Image height= " << img_original.rows << std::endl;
-	std::cout << "Number of channels= " << img_original.channels() << std::endl;
-	std::cout << "Element size in bytes= " << img_original.elemSize() << std::endl;
-	std::cout << "Row size in bytes= " << img_original.step << std::endl;
-
-	img_blur_asm = cv::Mat(img_original.rows, img_original.cols, CV_8UC1); //8 bits unsigned chanel 1 
-	int kernel_size = 2;
-	int kernel_length = 4 * kernel_size*kernel_size + 4 * kernel_size + 1;
-	float* kernel = (float*)malloc(kernel_length * sizeof(float));
-
-	int * pix_addr = (int*)malloc(kernel_length * sizeof(int)); //guarda las direcciones de memoria de la matriz kernel
-
-	for (int i = 0; i <kernel_length; i++) {
-		kernel[i] = float(1.0) / (kernel_length);
-		std::cout << "ki:" << kernel[i] <<std::endl;
-		
-	}
-	
-	int i = kernel_size-1;
-	int j = kernel_size-1;
-	int k1 = -kernel_size-1;
-	int k2 = -kernel_size-1;
-
-	int pix_x = 0;
-	int pix_y = 0;
-	int k_x = 0;
-	int k_y = 0;
-	int pix_aux = 0;
-	int ki = 0;
-	float suma = 0.0;
-
-	__asm
-	{
-		main:
-
-			CALL for_i
-
-			JMP fin
-
-		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-		for_i:; recorre filas i
-
-			MOV ecx, i; se carga i se incrementa y se regresa
-			INC ecx
-			MOV i, ecx
-
-			CALL for_j
-
-			MOV eax, img_original.rows; se cargan los datos para realizar la comparacion
-			MOV edx, kernel_size
-			SUB eax, edx
-
-			; se reinicia j
-			MOV edx, kernel_size
-			DEC edx
-			MOV j, edx
-			MOV ecx, i
-
-					; CMP i < img_original.rows - kernel_size
-			CMP eax, ecx
-			JNL for_i
-
-			ret
-
-		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-		  for_j:; recorre cols j
-
-			  MOV ecx, j; se carga j se incrementa y se regresa
-			  INC ecx
-			  MOV j, ecx
-
-			  FLDZ; se carga un 0 a la pila de float para suma = 0
-
-			  CALL for_k1
-
-			  MOV ecx, i; se carga i, j, cols, y la direccion de img_blur
-			  MOV edx, j
-			  MOV eax, img_original.cols
-			  MOV ebx, img_blur_asm.data
-
-			  IMUL eax, ecx; se hace la multuplicacion de cols * i
-			  ADD eax, edx; se suma j a la multiplicacion
-
-			  ; cargar de st0 a suma
-			  FISTP suma
-			  XOR edx, edx
-			  MOV edx, suma
-
-			  MOV[ebx + eax], dl; se guarda suma a la dirccion en img_blur
-			  ; img_blur.data[i * img_original.cols + j] = (int)suma
-			  MOV ki,0
-			  ; se reinicia k1
-			  MOV ecx, kernel_size
-			  NEG ecx
-			  DEC ecx
-			  MOV k1, ecx
-
-			  MOV eax, img_original.cols; se cargan los datos para realizar la comparacion
-			  MOV edx, kernel_size
-			  SUB eax, edx
-			  MOV ecx, j
-
-			  ; CMP j < img_original.cols - kernel_size
-			  CMP eax, ecx
-			  JNL for_j
-
-			  ret
-
-		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-			for_k1:
-
-				MOV ecx, k1; se carga k1 se incrementa y se regresa
-				INC ecx
-				MOV k1, ecx
-
-				CALL for_k2
-
-				; se reinicia k2
-				MOV ecx, kernel_size
-				NEG ecx
-				DEC ecx
-				MOV k2, ecx
-
-				MOV ecx, k1
-				MOV eax, kernel_size
-					
-					; CMP k1 <= kernel_size
-				CMP eax,ecx
-				JNLE for_k1
-
-				ret
-
-		;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-			for_k2:
-
-				MOV ecx, k2; se carga k2 se incrementa y se regresa
-				INC ecx
-				MOV k2, ecx
-
-				; pix_x = i + k1
-				MOV eax, i
-				MOV ebx, k1
-
-				ADD eax, ebx
-				MOV pix_x, eax
-
-				; pix_y = j + k2;
-				MOV eax, j
-
-				ADD eax, ecx
-				MOV pix_y, eax
-
-				; k_x = k1 + kernel_size;
-				MOV edx, kernel_size
-				MOV eax, k1
-				ADD eax, edx
-				MOV k_x, eax
-
-				; k_y = k2 + kernel_size;
-				MOV edx, kernel_size
-				MOV eax, k2
-				ADD eax, edx
-				MOV k_y, eax
-
-				;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-				; suma += img_original.data[pix_x * img_original.cols + pix_y] * kernel[k_x*(2 * kernel_size + 1) + k_y]
-				; kernel[k_x*(2 * kernel_size + 1) + k_y]
-				MOV esi, kernel
-				MOV edx, ki
-				ADD esi, edx ;-----------------> direccion del valor que se saca de kernel
-
-				ADD edx,4
-				MOV ki, edx
-					
-				; img_original.data[pix_x * img_original.cols + pix_y]
-				MOV eax, pix_x
-				MOV ebx, pix_y
-				MOV ecx, img_original.cols
-
-				IMUL eax, ecx
-				ADD eax, ebx	;ya no mas operaciones
-
-				MOV edi, img_original.data
-				ADD edi, eax;----------------->direccion del valor que se saca de la imagen
-
-					;;;;;; Hay que sacar el valor de suma, luego kenrel  y ponerlos en st
-					;meter el valor de img_original en st y multiplic kernel con img
-					;se hace ADD del resultaod a suma TODO ESTO ES EN FLOTANTES O SE CASTEA
-					
-				FLD [esi]; carga el valor de kernel
-				XOR eax, eax
-				MOV al, [edi]
-				MOV pix_aux, eax
-				FILD [pix_aux] ;carga el valor del pixel
-
-				FMULP st(1), st(0)
-				FADDP st(1), st(0)
-
-				MOV eax, k2
-				MOV ebx, kernel_size
-
-				; CMP k2 <= kernel_size
-				CMP  ebx, eax
-				JNLE for_k2
-
-				ret
-		fin:
-				NOP
-	}
-	
-	
-	cv::imshow("Original Image", img_original);
-	cv::imshow("blur", img_blur_asm);
-	//cv::imshow("blur", img_blur_asm);
-}
-	*/
 }
 
